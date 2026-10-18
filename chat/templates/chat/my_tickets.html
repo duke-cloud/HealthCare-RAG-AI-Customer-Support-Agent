@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block title %}My Tickets — HealthCare RAG{% endblock %}
+{% block page_title %}📋 My Support Tickets{% endblock %}
+{% block page_sub %}Track the status of your open and resolved support requests{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+  <a href="{% url 'create_ticket' %}" class="btn btn-primary">➕ New Ticket</a>
+</div>
+
+{% if tickets %}
+<div class="card">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Subject</th>
+        <th>Status</th>
+        <th>Opened</th>
+        <th>Last Updated</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in tickets %}
+      <tr>
+        <td>
+          <div style="font-weight:600;color:var(--gray-800)">{{ t.subject }}</div>
+          <div style="font-size:11px;color:var(--gray-400);margin-top:2px">
+            {{ t.description|truncatechars:90 }}
+          </div>
+        </td>
+        <td>
+          <span class="badge
+            {% if t.status == 'open' %}badge-yellow
+            {% elif t.status == 'resolved' %}badge-green
+            {% else %}badge-blue{% endif %}">
+            {{ t.get_status_display }}
+          </span>
+        </td>
+        <td style="color:var(--gray-400);font-size:12px;white-space:nowrap">
+          {{ t.created_at|date:"M j, Y" }}
+        </td>
+        <td style="color:var(--gray-400);font-size:12px;white-space:nowrap">
+          {{ t.updated_at|timesince }} ago
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% else %}
+<div class="empty-state card" style="max-width:480px;margin:0 auto">
+  <div class="es-icon">🎫</div>
+  <div class="es-title">No tickets yet</div>
+  <p style="font-size:13px;color:var(--gray-400);margin-bottom:20px">
+    Our AI chat resolves most questions instantly. Create a ticket only if the AI
+    couldn't fully answer your question.
+  </p>
+  <div style="display:flex;gap:10px;justify-content:center">
+    <a href="{% url 'chat' %}" class="btn btn-primary">💬 Try AI Chat</a>
+    <a href="{% url 'create_ticket' %}" class="btn btn-outline">Create Ticket</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

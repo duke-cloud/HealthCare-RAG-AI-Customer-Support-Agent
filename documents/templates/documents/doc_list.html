@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}Knowledge Base{% endblock %}
+{% block page_title %}📚 Knowledge Base{% endblock %}
+{% block page_sub %}Manage documents indexed into the RAG vector store{% endblock %}
+{% block content %}
+<div style="display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap">
+  <div style="flex:1">
+    <span style="font-size:13px;color:var(--gray-600)">{{ docs|length }} document{{ docs|length|pluralize }} ·
+      {{ docs|length }} active</span>
+  </div>
+  <button id="reindexBtn" class="btn btn-success">🔄 Re-index All Documents</button>
+  <a href="{% url 'doc_add' %}" class="btn btn-primary">➕ Add Document</a>
+</div>
+<div class="alert alert-info mb-16">
+  💡 After adding or editing documents, click <strong>Re-index All Documents</strong> to update the FAISS vector store. Changes won't appear in chat until re-indexed.
+</div>
+{% for doc in docs %}
+<div class="doc-card">
+  <div style="display:flex;gap:10px;align-items:flex-start;flex:1">
+    <div class="doc-indexed {% if doc.is_indexed %}yes{% else %}no{% endif %}" title="{% if doc.is_indexed %}Indexed{% else %}Not indexed{% endif %}"></div>
+    <div style="flex:1">
+      <div style="font-weight:700;font-size:14px;color:var(--gray-800)">{{ doc.title }}</div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:3px;display:flex;gap:12px;flex-wrap:wrap">
+        <span class="badge badge-blue">{{ doc.get_doc_type_display }}</span>
+        <span>ID: {{ doc.source_id }}</span>
+        <span>v{{ doc.version }}</span>
+        <span>{{ doc.created_at|date:"M j, Y" }}</span>
+        {% if doc.is_indexed %}<span style="color:var(--accent)">✅ Indexed {{ doc.indexed_at|date:"M j H:i" }}</span>
+        {% else %}<span style="color:var(--warning)">⚠️ Not yet indexed</span>{% endif %}
+      </div>
+      <div style="font-size:12px;color:var(--gray-600);margin-top:6px">{{ doc.content|truncatechars:140 }}</div>
+      {% if doc.tags %}
+      <div style="margin-top:6px">{% for tag in doc.tags.split %}<span class="badge badge-gray" style="margin-right:4px">{{ tag }}</span>{% endfor %}</div>
+      {% endif %}
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+    <form method="post" action="{% url 'doc_delete' doc.pk %}" onsubmit="return confirm('Remove this document?')">{% csrf_token %}
+      <button type="submit" class="btn btn-danger btn-sm">🗑️ Remove</button>
+    </form>
+  </div>
+</div>
+{% empty %}
+<div class="empty-state card">
+  <div class="es-icon">📚</div>
+  <div class="es-title">No documents in knowledge base</div>
+  <p style="font-size:13px;color:var(--gray-400);margin-bottom:14px">Add your FAQs, policies, and guides to power the AI.</p>
+  <a href="{% url 'doc_add' %}" class="btn btn-primary">➕ Add First Document</a>
+</div>
+{% endfor %}
+{% endblock %}

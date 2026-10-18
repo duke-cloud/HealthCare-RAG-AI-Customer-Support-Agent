@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}HealthCare RAG{% endblock %}</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+<div class="app">
+{% if user.is_authenticated %}
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-logo">🏥</div>
+    <div>
+      <div class="brand-name">HealthCare RAG</div>
+      <div class="brand-sub">AI Support Agent</div>
+    </div>
+  </div>
+
+  <div class="rag-status {% if rag_ready %}ready{% else %}not-ready{% endif %}">
+    <div class="status-dot {% if rag_ready %}green{% else %}orange{% endif %}"></div>
+    {% if rag_ready %}RAG Ready · {{ index_total }} chunks{% else %}RAG Index Not Loaded{% endif %}
+  </div>
+
+  <nav class="sidebar-nav">
+    <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+      <span class="icon">🏠</span> Dashboard</a>
+    <a href="{% url 'chat' %}" class="nav-link {% if 'chat' in request.resolver_match.url_name %}active{% endif %}">
+      <span class="icon">💬</span> AI Support Chat</a>
+
+    <div class="nav-section">Support</div>
+    <a href="{% url 'create_ticket' %}" class="nav-link {% if request.resolver_match.url_name == 'create_ticket' %}active{% endif %}">
+      <span class="icon">🎫</span> Create Ticket</a>
+    <a href="{% url 'my_tickets' %}" class="nav-link {% if request.resolver_match.url_name == 'my_tickets' %}active{% endif %}">
+      <span class="icon">📋</span> My Tickets</a>
+
+    {% if user.is_staff %}
+    <div class="nav-section">Admin</div>
+    <a href="{% url 'doc_list' %}" class="nav-link {% if 'doc' in request.resolver_match.url_name %}active{% endif %}">
+      <span class="icon">📚</span> Knowledge Base</a>
+    <a href="{% url 'doc_add' %}" class="nav-link {% if request.resolver_match.url_name == 'doc_add' %}active{% endif %}">
+      <span class="icon">➕</span> Add Document</a>
+    <a href="{% url 'monitoring' %}" class="nav-link {% if request.resolver_match.url_name == 'monitoring' %}active{% endif %}">
+      <span class="icon">📊</span> Monitoring</a>
+    <a href="/admin/" class="nav-link"><span class="icon">⚙️</span> Django Admin</a>
+    {% endif %}
+  </nav>
+  <div class="sidebar-footer">RAG Engine · FAISS · Anthropic Claude</div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-title">{% block page_title %}HealthCare RAG{% endblock %}</div>
+      <div class="topbar-sub">{% block page_sub %}AI-powered healthcare customer support{% endblock %}</div>
+    </div>
+    <div class="topbar-right">
+      {% if messages %}{% for msg in messages %}
+      <div class="alert alert-{{ msg.tags }}" style="margin:0;padding:6px 12px;font-size:12px">{{ msg }}</div>
+      {% endfor %}{% endif %}
+      <span style="font-size:12px;color:var(--gray-400)">{{ user.get_full_name|default:user.username }}</span>
+      <div class="avatar">{{ user.first_name.0|default:user.username.0|upper }}</div>
+      <a href="{% url 'logout' %}" class="btn btn-ghost btn-sm">Sign out</a>
+    </div>
+  </header>
+  <div class="page-body">{% block content %}{% endblock %}</div>
+</div>
+
+{% else %}
+<div style="flex:1">{% block auth_content %}{% endblock %}</div>
+{% endif %}
+</div>
+{% load static %}
+<script src="{% static 'js/chat.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

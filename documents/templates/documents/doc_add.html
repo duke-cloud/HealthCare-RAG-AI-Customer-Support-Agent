@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Add Document{% endblock %}
+{% block page_title %}➕ Add Knowledge Document{% endblock %}
+{% block page_sub %}Documents are automatically chunked and embedded into the FAISS vector store on re-index{% endblock %}
+{% block content %}
+<div class="two-col">
+  <div class="card">
+    <div class="card-title"><span>📝</span> Document Details</div>
+    <form method="post">{% csrf_token %}
+      <div class="form-group"><label class="form-label">Title</label>
+        <input name="title" class="form-control" required placeholder="e.g. Appointment Scheduling FAQ"></div>
+      <div class="form-group"><label class="form-label">Document Type</label>
+        <select name="doc_type" class="form-control">
+          {% for val,label in doc_types %}
+          <option value="{{ val }}">{{ label }}</option>
+          {% endfor %}
+        </select></div>
+      <div class="form-group"><label class="form-label">Content</label>
+        <textarea name="content" class="form-control" rows="14" required placeholder="Paste or type the full document content. PHI will be automatically redacted before indexing."></textarea></div>
+      <div class="form-group"><label class="form-label">Tags (space-separated)</label>
+        <input name="tags" class="form-control" placeholder="e.g. billing insurance portal"></div>
+      <div class="alert alert-warning">🔒 All PHI (SSN, dates of birth, phone numbers, emails) will be automatically redacted before indexing to protect patient privacy.</div>
+      <div style="display:flex;gap:10px">
+        <button type="submit" class="btn btn-primary">💾 Save Document</button>
+        <a href="{% url 'doc_list' %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+  <div>
+    <div class="card mb-16">
+      <div class="card-title"><span>💡</span> Writing Effective Documents</div>
+      <div style="font-size:13px;color:var(--gray-600);line-height:1.8">
+        <strong>Use clear headers and structure:</strong><br>
+        Q: How do I schedule an appointment?<br>
+        A: You can schedule by calling 1-800-HEALTH, using the patient portal…<br><br>
+        <strong>Be specific and actionable:</strong> Include exact steps, phone numbers, URLs, and timelines.<br><br>
+        <strong>Keep each document focused:</strong> One topic per document works better for retrieval.<br><br>
+        <strong>Supported types:</strong> FAQs, Policies, Procedures, Guides, Forms
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>⚙️</span> Processing Pipeline</div>
+      <div style="font-size:12px;color:var(--gray-600);line-height:2">
+        1. 📝 Text extraction & normalisation<br>
+        2. 🔒 PHI detection & redaction<br>
+        3. ✂️ Sliding-window chunking (400 tokens, 80 overlap)<br>
+        4. 🧮 TF-IDF + SVD embedding (384 dimensions)<br>
+        5. 📦 FAISS IndexFlatIP storage<br>
+        6. 🔍 Semantic + TF-IDF reranking at query time
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

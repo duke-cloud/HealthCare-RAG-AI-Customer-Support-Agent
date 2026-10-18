@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}Monitoring{% endblock %}
+{% block page_title %}📊 RAG Monitoring Dashboard{% endblock %}
+{% block page_sub %}Query analytics, safety metrics, and system health — last 7 days{% endblock %}
+{% block content %}
+
+<div class="stats-grid mb-16">
+  <div class="stat-card" style="background:linear-gradient(135deg,#0ea5e9,#0369a1);color:#fff">
+    <div class="stat-icon">🔍</div><div class="stat-val">{{ total_q }}</div><div class="stat-lbl">Total Queries</div>
+  </div>
+  <div class="stat-card" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff">
+    <div class="stat-icon">⚕️</div><div class="stat-val">{{ escalated }}</div><div class="stat-lbl">Escalated</div>
+  </div>
+  <div class="stat-card" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff">
+    <div class="stat-icon">🔒</div><div class="stat-val">{{ phi_block }}</div><div class="stat-lbl">PHI Blocked</div>
+  </div>
+  <div class="stat-card" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff">
+    <div class="stat-icon">✅</div><div class="stat-val">{{ avg_conf }}%</div><div class="stat-lbl">Avg Confidence</div>
+  </div>
+</div>
+
+<div class="stats-grid mb-16">
+  <div class="stat-card" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff">
+    <div class="stat-icon">⚡</div><div class="stat-val">{{ avg_lat }}ms</div><div class="stat-lbl">Avg Latency</div>
+  </div>
+  <div class="stat-card" style="background:linear-gradient(135deg,#06b6d4,#0891b2);color:#fff">
+    <div class="stat-icon">👍</div><div class="stat-val">{{ thumbs_up }}</div><div class="stat-lbl">Thumbs Up</div>
+  </div>
+  <div class="stat-card" style="background:linear-gradient(135deg,#f43f5e,#e11d48);color:#fff">
+    <div class="stat-icon">👎</div><div class="stat-val">{{ thumbs_dn }}</div><div class="stat-lbl">Thumbs Down</div>
+  </div>
+  <div class="stat-card" style="background:linear-gradient(135deg,#84cc16,#65a30d);color:#fff">
+    <div class="stat-icon">📚</div><div class="stat-val">{{ indexed }}</div><div class="stat-lbl">Docs Indexed</div>
+  </div>
+</div>
+
+<div class="two-col mb-16">
+  <div class="card">
+    <div class="card-title"><span>📈</span> Query Volume (7 days)</div>
+    <canvas id="trendChart" height="200"></canvas>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title"><span>⚙️</span> Answer Methods</div>
+      <canvas id="methodChart" height="160"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>🛡️</span> Risk Levels</div>
+      <canvas id="riskChart" height="160"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Alerts -->
+{% if open_tickets %}
+<div class="alert alert-warning mb-16">🎫 <strong>{{ open_tickets }}</strong> open support ticket{{ open_tickets|pluralize }} awaiting response. <a href="/admin/chat/supportticket/?status=open">View in Admin →</a></div>
+{% endif %}
+{% if phi_block > 0 %}
+<div class="alert alert-danger mb-16">🔒 <strong>{{ phi_block }}</strong> PHI-blocked {{ phi_block|pluralize:"query,queries" }} in the last 7 days. Review audit logs below.</div>
+{% endif %}
+
+<!-- Audit Log Table -->
+<div class="card">
+  <div class="card-title"><span>📋</span> Recent Query Audit Log</div>
+  <table class="data-table">
+    <thead>
+      <tr><th>Time</th><th>Query (redacted)</th><th>Risk</th><th>Method</th><th>Confidence</th><th>Latency</th><th>Chunks</th></tr>
+    </thead>
+    <tbody>
+      {% for log in recent_logs %}
+      <tr>
+        <td style="white-space:nowrap;color:var(--gray-400)">{{ log.created_at|date:"M j H:i" }}</td>
+        <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ log.query_text }}">{{ log.query_text|truncatechars:55 }}</td>
+        <td>
+          {% if log.risk_level == 'phi' %}<span class="badge badge-red">PHI</span>
+          {% elif log.risk_level == 'clinical' %}<span class="badge badge-yellow">Clinical</span>
+          {% else %}<span class="badge badge-green">Safe</span>{% endif %}
+          {% if log.escalated %}<span class="badge badge-yellow" style="margin-left:4px">Escalated</span>{% endif %}
+        </td>
+        <td><span class="badge badge-blue">{{ log.method }}</span></td>
+        <td>{% if log.confidence %}{{ log.confidence|floatformat:2 }}{% else %}—{% endif %}</td>
+        <td>{% if log.latency_ms %}{{ log.latency_ms }}ms{% else %}—{% endif %}</td>
+        <td>{{ log.chunks_used }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" style="text-align:center;color:var(--gray-400);padding:24px">No queries in the last 7 days.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const trend   = {{ trend_json|safe }};
+const methods = {{ methods_json|safe }};
+const risks   = {{ risks_json|safe }};
+drawLineChart('trendChart', trend.map(t=>t.date), trend.map(t=>t.count));
+drawDoughnutChart('methodChart', methods.map(m=>m.method), methods.map(m=>m.c));
+drawDoughnutChart('riskChart', risks.map(r=>r.risk_level), risks.map(r=>r.c));
+</script>
+{% endblock %}

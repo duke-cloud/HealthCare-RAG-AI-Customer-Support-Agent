@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block auth_content %}
+<div class="landing">
+  <div class="landing-box">
+    <div style="font-size:56px;margin-bottom:14px">🏥</div>
+    <h1>HealthCare RAG</h1>
+    <p>Retrieval-Augmented Generation for healthcare customer support. Instant, accurate, privacy-safe answers from your knowledge base.</p>
+    <div class="feature-grid">
+      <div class="feature-item"><div class="fi-icon">🔍</div><div class="fi-text">Semantic search across your entire knowledge base using FAISS</div></div>
+      <div class="feature-item"><div class="fi-icon">🤖</div><div class="fi-text">Claude AI generates grounded answers with source citations</div></div>
+      <div class="feature-item"><div class="fi-icon">🔒</div><div class="fi-text">PHI detection & redaction — HIPAA-aware by design</div></div>
+      <div class="feature-item"><div class="fi-icon">⚕️</div><div class="fi-text">Clinical query escalation — never gives medical advice</div></div>
+      <div class="feature-item"><div class="fi-icon">📊</div><div class="fi-text">Full monitoring, confidence scoring, and audit logs</div></div>
+      <div class="feature-item"><div class="fi-icon">🎫</div><div class="fi-text">Ticket creation when AI can't fully answer</div></div>
+    </div>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <a href="{% url 'login' %}"    class="btn btn-lg" style="background:#fff;color:#0369a1;font-weight:800">Sign In</a>
+      <a href="{% url 'register' %}" class="btn btn-lg" style="background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.4)">Create Account</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

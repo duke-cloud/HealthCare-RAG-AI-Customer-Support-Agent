@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — HealthCare RAG{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_sub %}Welcome back, {{ user.first_name|default:user.username }} — {{ user.profile.role|capfirst }}{% endblock %}
+{% block content %}
+
+<!-- Stats -->
+<div class="stats-grid mb-16">
+  <div class="stat-card" style="background:linear-gradient(135deg,#0ea5e9,#0369a1);color:#fff">
+    <div class="stat-icon">💬</div>
+    <div class="stat-val">{{ stats.sessions }}</div>
+    <div class="stat-lbl">Chat Sessions</div>
+  </div>
+  <div class="stat-card" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff">
+    <div class="stat-icon">📚</div>
+    <div class="stat-val">{{ stats.docs_indexed }}</div>
+    <div class="stat-lbl">Docs Indexed</div>
+  </div>
+  <div class="stat-card" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff">
+    <div class="stat-icon">🔍</div>
+    <div class="stat-val">{{ stats.total_indexed }}</div>
+    <div class="stat-lbl">Vector Chunks</div>
+  </div>
+  <div class="stat-card" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff">
+    <div class="stat-icon">🎫</div>
+    <div class="stat-val">{{ stats.tickets }}</div>
+    <div class="stat-lbl">Support Tickets</div>
+  </div>
+</div>
+
+<div class="two-col mb-16">
+  <!-- RAG Status + Quick Actions -->
+  <div>
+    <div class="card mb-16">
+      <div class="card-title"><span>🤖</span> RAG System Status</div>
+      {% if stats.rag_ready %}
+      <div class="alert alert-success">
+        ✅ Knowledge base is loaded and ready — <strong>{{ stats.total_indexed }}</strong> chunks indexed across <strong>{{ stats.docs_indexed }}</strong> documents.
+      </div>
+      {% else %}
+      <div class="alert alert-warning">
+        ⚠️ Knowledge base index not loaded. {% if user.is_staff %}Go to <a href="{% url 'doc_list' %}">Knowledge Base</a> and click Re-index.{% else %}Contact an administrator.{% endif %}
+      </div>
+      {% endif %}
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+        <a href="{% url 'chat' %}" class="btn btn-primary">💬 Start AI Chat</a>
+        <a href="{% url 'create_ticket' %}" class="btn btn-outline">🎫 Create Ticket</a>
+        {% if user.is_staff %}
+        <a href="{% url 'doc_list' %}" class="btn btn-ghost">📚 Knowledge Base</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Recent sessions -->
+    <div class="card">
+      <div class="card-title" style="justify-content:space-between">
+        <span style="display:flex;align-items:center;gap:8px"><span>💬</span> Recent Conversations</span>
+        <a href="{% url 'chat' %}" class="btn btn-ghost btn-sm">View All</a>
+      </div>
+      {% for s in sessions %}
+      <a href="{% url 'chat_session' s.pk %}" style="text-decoration:none;display:block;padding:9px 10px;border-radius:8px;margin-bottom:4px;transition:background .15s;color:var(--gray-700)" class="{% if forloop.first %}{% endif %}">
+        <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">💬 {{ s.title }}</div>
+        <div style="font-size:11px;color:var(--gray-400);margin-top:2px">{{ s.updated_at|timesince }} ago · {{ s.messages.count }} messages</div>
+      </a>
+      {% empty %}
+      <div class="empty-state" style="padding:20px">
+        <div class="es-icon" style="font-size:32px">💬</div>
+        <div class="es-title" style="font-size:13px">No conversations yet</div>
+        <a href="{% url 'chat' %}" class="btn btn-primary btn-sm" style="margin-top:10px">Start your first chat</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Recent activity + tickets -->
+  <div>
+    <div class="card mb-16">
+      <div class="card-title"><span>🕐</span> Recent Queries</div>
+      {% for q in recent_queries %}
+      <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--gray-700);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ q.query_text|truncatechars:60 }}</div>
+        <div style="font-size:10px;color:var(--gray-400);margin-top:2px;display:flex;gap:10px">
+          <span>{{ q.created_at|timesince }} ago</span>
+          <span>{{ q.latency_ms }}ms</span>
+          {% if q.escalated %}<span class="badge badge-yellow">Escalated</span>{% endif %}
+          {% if q.risk_level == 'phi' %}<span class="badge badge-red">PHI Blocked</span>{% endif %}
+        </div>
+      </div>
+      {% empty %}
+      <div style="font-size:13px;color:var(--gray-400);text-align:center;padding:20px">No queries yet</div>
+      {% endfor %}
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="justify-content:space-between">
+        <span style="display:flex;align-items:center;gap:8px"><span>🎫</span> My Tickets</span>
+        <a href="{% url 'my_tickets' %}" class="btn btn-ghost btn-sm">View All</a>
+      </div>
+      {% for t in tickets %}
+      <div style="padding:9px 0;border-bottom:1px solid var(--border)">
+        <div style="font-weight:600;font-size:13px">{{ t.subject|truncatechars:50 }}</div>
+        <div style="font-size:11px;color:var(--gray-400);margin-top:2px">{{ t.created_at|date:"M j, Y" }}
+          · <span class="badge {% if t.status == 'open' %}badge-yellow{% elif t.status == 'resolved' %}badge-green{% else %}badge-blue{% endif %}">{{ t.get_status_display }}</span>
+        </div>
+      </div>
+      {% empty %}
+      <div style="font-size:13px;color:var(--gray-400);text-align:center;padding:20px">No tickets yet</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Quick-start guidance -->
+<div class="card" style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border-color:#bae6fd">
+  <div class="card-title"><span>🚀</span> How to Use HealthCare RAG</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;font-size:13px">
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0">1</div>
+      <div><div style="font-weight:700;margin-bottom:3px">Ask a question</div><div style="color:var(--gray-600)">Type your support question in the AI Chat — about appointments, billing, policies, or portal help.</div></div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0">2</div>
+      <div><div style="font-weight:700;margin-bottom:3px">Get grounded answers</div><div style="color:var(--gray-600)">The AI searches your knowledge base and generates answers with source citations.</div></div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="width:28px;height:28px;border-radius:50%;background:var(--purple);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0">3</div>
+      <div><div style="font-weight:700;margin-bottom:3px">Escalate if needed</div><div style="color:var(--gray-600)">If the AI can't answer, create a support ticket and a human agent will follow up.</div></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

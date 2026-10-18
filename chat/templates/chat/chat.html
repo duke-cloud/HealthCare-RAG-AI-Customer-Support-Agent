@@ -1,0 +1,225 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Support Chat — HealthCare RAG</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--gray-50); }
+    .app { display: flex; height: 100vh; overflow: hidden; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── SIDEBAR ───────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo">🏥</div>
+      <div>
+        <div class="brand-name">HealthCare RAG</div>
+        <div class="brand-sub">AI Support Agent</div>
+      </div>
+    </div>
+
+    <div class="rag-status {% if is_ready %}ready{% else %}not-ready{% endif %}">
+      <div class="status-dot {% if is_ready %}green{% else %}orange{% endif %}"></div>
+      {% if is_ready %}RAG Index Ready{% else %}Index Not Loaded{% endif %}
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="{% url 'dashboard' %}" class="nav-link">
+        <span class="icon">🏠</span> Dashboard
+      </a>
+      <a href="{% url 'chat' %}" class="nav-link active">
+        <span class="icon">💬</span> AI Chat
+      </a>
+
+      <div class="nav-section">Sessions</div>
+      <a href="{% url 'new_session' %}" class="nav-link"
+         style="color:var(--primary);font-weight:700">
+        <span class="icon">➕</span> New Chat
+      </a>
+      {% for s in sessions %}
+      <a href="{% url 'chat_session' s.pk %}"
+         class="chat-sess-item {% if s.pk == session.pk %}active{% endif %}"
+         title="{{ s.title }}">
+        💬 {{ s.title|truncatechars:28 }}
+      </a>
+      {% endfor %}
+
+      <div class="nav-section">Support</div>
+      <a href="{% url 'create_ticket' %}" class="nav-link">
+        <span class="icon">🎫</span> Create Ticket
+      </a>
+      <a href="{% url 'my_tickets' %}" class="nav-link">
+        <span class="icon">📋</span> My Tickets
+      </a>
+
+      {% if request.user.is_staff %}
+      <div class="nav-section">Admin</div>
+      <a href="{% url 'doc_list' %}"   class="nav-link"><span class="icon">📚</span> Knowledge Base</a>
+      <a href="{% url 'monitoring' %}" class="nav-link"><span class="icon">📊</span> Monitoring</a>
+      {% endif %}
+    </nav>
+
+    <div class="sidebar-footer">
+      Logged in as <strong>{{ request.user.first_name|default:request.user.username }}</strong>
+      &nbsp;·&nbsp; <a href="{% url 'logout' %}" style="color:#94a3b8">Sign out</a>
+    </div>
+  </aside>
+
+  <!-- ── MAIN CHAT AREA ─────────────────────────────────────────── -->
+  <div class="main" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-title">💬 AI Support Chat</div>
+        <div class="topbar-sub">
+          {{ session.title|truncatechars:55 }}
+          &nbsp;·&nbsp;
+          {% if is_ready %}
+            <span style="color:var(--accent)">● Knowledge base ready</span>
+          {% else %}
+            <span style="color:var(--warning)">⚠ Index not loaded</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="topbar-right">
+        <a href="{% url 'create_ticket' %}" class="btn btn-outline btn-sm">🎫 Open Ticket</a>
+        <div class="avatar">
+          {{ request.user.first_name.0|default:request.user.username.0|upper }}
+        </div>
+      </div>
+    </header>
+
+    <!-- Messages -->
+    <div class="chat-messages" id="chatMessages">
+
+      {% if not messages %}
+      <!-- Welcome bubble -->
+      <div class="msg-row">
+        <div class="msg-avatar ai">🏥</div>
+        <div style="max-width:74%">
+          <div class="msg-bubble ai">
+            <strong>Hello {{ request.user.first_name|default:request.user.username }}!</strong> 👋
+            I'm your HealthCare AI Support Agent. I can help you with:<br><br>
+            📅 <strong>Appointments</strong> — scheduling, cancellation, rescheduling<br>
+            💳 <strong>Billing</strong> — payments, insurance, financial assistance<br>
+            🔑 <strong>Patient Portal</strong> — login, password reset, navigation<br>
+            📋 <strong>Medical Records</strong> — requests, release, timelines<br>
+            🏥 <strong>Services</strong> — locations, hours, departments<br>
+            💊 <strong>Prescriptions</strong> — refills, pharmacy, prior auth<br><br>
+            <em style="color:var(--gray-400);font-size:12px">
+              ⚕️ I cannot give medical advice. For medical emergencies call <strong>911</strong>.
+            </em>
+          </div>
+          <div class="msg-meta">Just now</div>
+        </div>
+      </div>
+
+      <!-- Suggestion chips -->
+      <div style="display:flex;flex-wrap:wrap;gap:8px;padding-left:42px;margin-top:4px">
+        {% for q in suggestions %}
+        <button class="suggestion-btn" data-q="{{ q }}"
+          style="padding:7px 14px;background:#fff;border:1.5px solid var(--border);
+                 border-radius:20px;font-size:12px;cursor:pointer;color:var(--primary);
+                 font-weight:600;transition:all .15s;"
+          onmouseover="this.style.borderColor='var(--primary)';this.style.background='#eff6ff'"
+          onmouseout="this.style.borderColor='var(--border)';this.style.background='#fff'">
+          {{ q }}
+        </button>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Previous messages -->
+      {% for msg in messages %}
+      <div class="msg-row {% if msg.role == 'user' %}user{% endif %}">
+        <div class="msg-avatar {% if msg.role == 'user' %}user{% else %}ai{% endif %}">
+          {% if msg.role == 'user' %}👤{% else %}🏥{% endif %}
+        </div>
+        <div style="max-width:74%">
+          <div class="msg-bubble
+            {% if msg.role == 'user' %}user
+            {% elif msg.escalated %}escalated
+            {% elif msg.risk_level == 'phi' %}phi-block
+            {% else %}ai{% endif %}">
+            {{ msg.content|linebreaksbr }}
+            {% if msg.role == 'assistant' and msg.sources %}
+            <div class="msg-sources">
+              <div style="font-size:10px;color:var(--gray-400);font-weight:700;margin-bottom:4px">
+                SOURCES
+              </div>
+              {% for s in msg.sources %}
+              <span class="source-chip">{{ s.id|default:s.title }}</span>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+          <div class="msg-meta">
+            {{ msg.created_at|date:"H:i" }}
+            {% if msg.confidence %}
+              &nbsp;·&nbsp;
+              <span class="confidence-bar">
+                <span class="confidence-fill"
+                  style="width:{% widthratio msg.confidence 1 100 %}%"></span>
+              </span>
+              {{ msg.confidence|floatformat:0 }}%
+            {% endif %}
+            {% if msg.latency_ms %}&nbsp;·&nbsp;{{ msg.latency_ms }}ms{% endif %}
+            {% if msg.escalated %}
+              &nbsp;<span class="badge badge-yellow">Escalated</span>
+            {% endif %}
+          </div>
+          {% if msg.role == 'assistant' %}
+          <div class="feedback-btns">
+            <button class="fb-btn {% if msg.feedback.rating == 1 %}up{% endif %}"
+              onclick="sendFeedback({{ msg.id }}, 1, this)">👍 Helpful</button>
+            <button class="fb-btn {% if msg.feedback.rating == -1 %}dn{% endif %}"
+              onclick="sendFeedback({{ msg.id }}, -1, this)">👎 Not helpful</button>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+
+    </div><!-- /chatMessages -->
+
+    <!-- Input area -->
+    <div class="chat-input-area">
+      {% csrf_token %}
+      <textarea
+        id="chatInput"
+        class="chat-input"
+        placeholder="Ask about appointments, billing, portal access, prescriptions… (Enter to send, Shift+Enter for new line)"
+        rows="1"
+        autocomplete="off"></textarea>
+      <button type="button" id="sendBtn" class="send-btn" title="Send message">➤</button>
+    </div>
+
+    {% if not is_ready %}
+    <div style="padding:8px 20px;background:#fff7ed;border-top:1px solid #fed7aa;
+                font-size:12px;color:#9a3412;display:flex;align-items:center;gap:8px">
+      ⚠️ The knowledge base index is not loaded — answers will be limited.
+      {% if request.user.is_staff %}
+        <a href="{% url 'doc_list' %}" style="color:#9a3412;font-weight:700">
+          Re-index documents →
+        </a>
+      {% endif %}
+    </div>
+    {% endif %}
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- Session ID for JS -->
+<input type="hidden" id="sessionPk" value="{{ session.pk }}">
+
+<script src="{% static 'js/chat.js' %}"></script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}Create Support Ticket — HealthCare RAG{% endblock %}
+{% block page_title %}🎫 Create Support Ticket{% endblock %}
+{% block page_sub %}Our team responds within 24 hours — for urgent medical issues call 911{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 380px;gap:20px;max-width:960px">
+
+  <!-- Form -->
+  <div class="card">
+    <div class="card-title"><span>🎫</span> New Support Request</div>
+    <form method="post">{% csrf_token %}
+      <div class="form-group">
+        <label class="form-label">Subject</label>
+        <input name="subject" class="form-control" required
+               placeholder="Brief description of your issue e.g. Cannot access test results">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea name="description" class="form-control" rows="7" required
+          placeholder="Describe your issue in detail. Include any error messages you see.&#10;&#10;Do NOT include personal information such as Social Security numbers or medical record numbers."></textarea>
+      </div>
+      <div class="alert alert-warning" style="margin-bottom:16px">
+        🔒 Do not include PHI (SSN, DOB, medical record numbers) in this form.
+        For urgent medical concerns call <strong>1-800-HEALTH</strong>.
+      </div>
+      <div style="display:flex;gap:10px">
+        <button type="submit" class="btn btn-primary">Submit Ticket</button>
+        <a href="{% url 'chat' %}" class="btn btn-ghost">← Back to Chat</a>
+      </div>
+    </form>
+    {% if messages %}
+      {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags }}" style="margin-top:14px">{{ msg }}</div>
+      {% endfor %}
+    {% endif %}
+  </div>
+
+  <!-- Sidebar info -->
+  <div>
+    <div class="card mb-16">
+      <div class="card-title"><span>💬</span> Try AI Chat First</div>
+      <p style="font-size:13px;color:var(--gray-600);line-height:1.65;margin-bottom:14px">
+        Our AI agent answers most common questions instantly — no waiting for a human agent.
+      </p>
+      <a href="{% url 'chat' %}" class="btn btn-primary btn-full">💬 Open AI Chat</a>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>📞</span> Other Contact Options</div>
+      <div style="font-size:13px;line-height:2.2;color:var(--gray-700)">
+        📞 <strong>Phone:</strong> 1-800-HEALTH<br>
+        📧 <strong>Email:</strong> support@healthcare.com<br>
+        🕐 <strong>Hours:</strong> Mon–Fri 8 am–6 pm<br>
+        🔑 <strong>Portal:</strong> portal.healthcare.com<br>
+        🚨 <strong>Emergency:</strong> Call <strong>911</strong>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
